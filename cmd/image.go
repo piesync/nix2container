@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"runtime"
 	"time"
@@ -15,6 +16,8 @@ import (
 )
 
 var fromImageFilename string
+var traces []string
+var traceOutput string
 
 var created timeValue
 
@@ -39,7 +42,7 @@ var imageCmd = &cobra.Command{
 	Short: "Generate an image.json file from a image configuration and layers",
 	Args:  cobra.MinimumNArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
-		err := image(args[0], args[1], fromImageFilename, args[2:], (time.Time)(created))
+		err := image(args[0], args[1], fromImageFilename, args[2:], (time.Time)(created), traces, traceOutput)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s", err)
 			os.Exit(1)
@@ -107,7 +110,8 @@ func imageFromManifest(outputFilename, manifestFilename string, blobsFilename st
 	return nil
 }
 
-func image(outputFilename, imageConfigPath string, fromImageFilename string, layerPaths []string, created time.Time) error {
+func image(outputFilename, imageConfigPath string, fromImageFilename string, layerPaths []string, created time.Time, tracePaths []string, traceOutput string) error {
+
 	var imageConfig v1.ImageConfig
 	var image types.Image
 
@@ -161,6 +165,25 @@ func image(outputFilename, imageConfigPath string, fromImageFilename string, lay
 		return err
 	}
 	logrus.Infof("Image has been written to %s", outputFilename)
+
+	if len(tracePaths) > 0 {
+		destination, err := os.Create(traceOutput)
+		if err != nil {
+			return err
+		}
+		for _, path := range tracePaths {
+			source, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			defer source.Close()
+			_, err = io.Copy(destination, source)
+			if err != nil {
+				return err
+			}
+		}
+		logrus.Infof("Image trace has been written to %s", traceOutput)
+	}
 	return nil
 }
 
@@ -168,6 +191,8 @@ func init() {
 	rootCmd.AddCommand(imageCmd)
 	imageCmd.Flags().StringVarP(&fromImageFilename, "from-image", "", "", "A JSON file describing the base image")
 	imageCmd.Flags().Var(&created, "created", "Timestamp at which the image was created")
+	imageCmd.Flags().StringSliceVar(&traces, "traces", traces, "The list of trace files")
+	imageCmd.Flags().StringVar(&traceOutput, "trace-output", "trace", "The path of the trace output")
 	rootCmd.AddCommand(imageFromDirCmd)
 	rootCmd.AddCommand(imageFromManifestCmd)
 }
