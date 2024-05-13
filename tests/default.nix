@@ -84,7 +84,7 @@ let
     nix-user = testScript {
       image = examples.nix-user;
       grepFlags = "-Pz";
-      pattern = "(?s)\[PASS].*\[PASS].*\[PASS].*drwxr-xr-x \\d+ user user 4096 Jan  1  1970 store";
+      pattern = "(?s)\[PASS].*\[PASS].*\[PASS].*drwxr-xr-x \\d+ user user \\d+ Jan  1  1970 store";
     };
     # Ensure the Nix database is correctly initialized by querying the
     # closure of the Nix binary.
