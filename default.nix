@@ -390,6 +390,8 @@ let
     # controlled using nixUid/nixGid.
     nixUid ? 0,
     nixGid ? 0,
+    # Time of creation of the image.
+    created ? "0001-01-01T00:00:00Z",
     # Deprecated: will be removed
     contents ? null,
     meta ? {},
@@ -439,6 +441,7 @@ let
         layers = layers;
       };
       fromImageFlag = l.optionalString (fromImage != "") "--from-image ${fromImage}";
+      createdFlag = "--created ${created}";
       layerPaths = l.concatMapStringsSep " " (l: l + "/layers.json") (layers ++ [customizationLayer]);
       image = let
         imageName = l.toLower name;
@@ -466,6 +469,7 @@ let
         ${nix2container-bin}/bin/nix2container image \
         $out \
         ${fromImageFlag} \
+        ${createdFlag} \
         ${configFile} \
         ${layerPaths}
       '';
